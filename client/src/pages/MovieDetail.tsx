@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -32,15 +31,29 @@ const MovieDetail = () => {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      supabase.from("movies").select("*").eq("id", id).maybeSingle(),
-      supabase.from("shows").select("id, show_time, screen, price").eq("movie_id", id).order("show_time"),
-    ]).then(([m, s]) => {
-      setMovie(m.data as Movie | null);
-      setShows((s.data as Show[]) ?? []);
-      setLoading(false);
-      if (m.data) document.title = `${(m.data as Movie).title} — Cinemati`;
-    });
+
+    const fetchData = async () => {
+      try {
+        const [movieRes, showRes] = await Promise.all([
+          fetch(`http://localhost:5000/api/movies/${id}`),
+          fetch(`http://localhost:5000/api/shows/movie/${id}`),
+        ]);
+
+        const movieData = await movieRes.json();
+        const showData = await showRes.json();
+
+        setMovie(movieData);
+        setShows(showData || []);
+
+        if (movieData) document.title = `${movieData.title} — Cinemati`;
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id]);
 
   if (loading) {

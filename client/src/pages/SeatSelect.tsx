@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,30 +31,27 @@ const SeatSelect = () => {
 
   const fetchAll = async () => {
     if (!id) return;
-    const [showRes, bookRes] = await Promise.all([
-      supabase.from("shows").select("*, movies(title)").eq("id", id).maybeSingle(),
-      supabase.from("bookings").select("seat_label").eq("show_id", id),
-    ]);
-    setShow(showRes.data as unknown as ShowFull);
-    setBookedSeats(new Set((bookRes.data ?? []).map((b: { seat_label: string }) => b.seat_label)));
-    setLoading(false);
-  };
 
+    try {
+      const [showRes, bookRes] = await Promise.all([
+        fetch(`http://localhost:5000/api/shows/${id}`),
+        fetch(`http://localhost:5000/api/bookings/${id}`),
+      ]);
+
+      const showData = await showRes.json();
+      const bookingData = await bookRes.json();
+
+      setShow(showData);
+      setBookedSeats(new Set(bookingData.map((b: any) => b.seat_label)));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     document.title = "Select seats — Cinemati";
     fetchAll();
-
-    const channel = supabase
-      .channel(`bookings-${id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings", filter: `show_id=eq.${id}` }, (payload) => {
-        setBookedSeats((s) => new Set(s).add((payload.new as { seat_label: string }).seat_label));
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const toggle = (label: string) => {
@@ -76,24 +72,43 @@ const SeatSelect = () => {
       navigate("/auth");
       return;
     }
+
     if (selected.size === 0 || !show) return;
+
     setSubmitting(true);
-    const rows = Array.from(selected).map((seat_label) => ({
-      user_id: user.id,
-      show_id: show.id,
-      seat_label,
-      price: Number(show.price),
-    }));
-    const { error } = await supabase.from("bookings").insert(rows);
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message.includes("duplicate") ? "One of your seats was just taken. Please reselect." : error.message);
-      await fetchAll();
-      setSelected(new Set());
-      return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:5000/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          show_id: show.id,
+          seats: Array.from(selected),
+          price: show.price,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message);
+        await fetchAll();
+        setSelected(new Set());
+        return;
+      }
+
+      toast.success(`Booked ${selected.size} seat${selected.size > 1 ? "s" : ""}!`);
+      navigate("/bookings");
+    } catch {
+      toast.error("Booking failed");
+    } finally {
+      setSubmitting(false);
     }
-    toast.success(`Booked ${rows.length} seat${rows.length > 1 ? "s" : ""}!`);
-    navigate("/bookings");
   };
 
   if (loading) {
@@ -134,13 +149,12 @@ const SeatSelect = () => {
                         onClick={() => toggle(label)}
                         disabled={isBooked}
                         aria-label={`Seat ${label}${isBooked ? " (booked)" : ""}`}
-                        className={`h-8 w-8 rounded-md text-[10px] font-medium transition-all ${
-                          isBooked
-                            ? "bg-muted text-muted-foreground/50 cursor-not-allowed"
-                            : isSelected
+                        className={`h-8 w-8 rounded-md text-[10px] font-medium transition-all ${isBooked
+                          ? "bg-muted text-muted-foreground/50 cursor-not-allowed"
+                          : isSelected
                             ? "bg-primary text-primary-foreground scale-110"
                             : "bg-secondary hover:bg-accent text-foreground"
-                        }`}
+                          }`}
                       >
                         {label}
                       </button>

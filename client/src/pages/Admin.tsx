@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -30,14 +29,33 @@ const Admin = () => {
   }, [authLoading, user, isAdmin, navigate]);
 
   const refresh = async () => {
-    const [m, s, b] = await Promise.all([
-      supabase.from("movies").select("id, title, duration_minutes").order("created_at", { ascending: false }),
-      supabase.from("shows").select("id, show_time, screen, price, movies(title)").order("show_time"),
-      supabase.from("bookings").select("id, seat_label, created_at, shows(screen, show_time, movies(title))").order("created_at", { ascending: false }).limit(50),
-    ]);
-    setMovies((m.data as Movie[]) ?? []);
-    setShows((s.data as unknown as ShowRow[]) ?? []);
-    setBookings((b.data as unknown as BookingAdminRow[]) ?? []);
+    try {
+      const token = localStorage.getItem("token");
+
+      const [mRes, sRes, bRes] = await Promise.all([
+        fetch("http://localhost:5000/api/admin/movies", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("http://localhost:5000/api/admin/shows", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("http://localhost:5000/api/admin/bookings", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const [mData, sData, bData] = await Promise.all([
+        mRes.json(),
+        sRes.json(),
+        bRes.json(),
+      ]);
+
+      setMovies(mData || []);
+      setShows(sData || []);
+      setBookings(bData || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -47,43 +65,89 @@ const Admin = () => {
   const addMovie = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const { error } = await supabase.from("movies").insert({
-      title: String(fd.get("title")),
-      description: String(fd.get("description") || ""),
-      poster_url: String(fd.get("poster_url") || ""),
-      duration_minutes: Number(fd.get("duration") || 120),
-      genre: String(fd.get("genre") || ""),
-      rating: String(fd.get("rating") || ""),
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch("http://localhost:5000/api/admin/movies", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: fd.get("title"),
+        description: fd.get("description"),
+        poster_url: fd.get("poster_url"),
+        duration_minutes: Number(fd.get("duration")),
+        genre: fd.get("genre"),
+        rating: fd.get("rating"),
+      }),
     });
-    if (error) toast.error(error.message);
-    else { toast.success("Movie added"); (e.target as HTMLFormElement).reset(); refresh(); }
+
+    if (!res.ok) toast.error("Error adding movie");
+    else {
+      toast.success("Movie added");
+      (e.target as HTMLFormElement).reset();
+      refresh();
+    }
   };
 
   const deleteMovie = async (id: string) => {
-    const { error } = await supabase.from("movies").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); refresh(); }
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`http://localhost:5000/api/admin/movies/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) toast.error("Error deleting");
+    else {
+      toast.success("Deleted");
+      refresh();
+    }
   };
 
   const addShow = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const movieId = String(fd.get("movie_id") || "");
-    if (!movieId) return toast.error("Pick a movie");
-    const { error } = await supabase.from("shows").insert({
-      movie_id: movieId,
-      show_time: new Date(String(fd.get("show_time"))).toISOString(),
-      screen: String(fd.get("screen") || "Screen 1"),
-      price: Number(fd.get("price") || 12),
-      rows: Number(fd.get("rows") || 6),
-      cols: Number(fd.get("cols") || 8),
-    });
-    if (error) toast.error(error.message);
-    else { toast.success("Show added"); (e.target as HTMLFormElement).reset(); refresh(); }
-  };
+    const token = localStorage.getItem("token");
 
+    const res = await fetch("http://localhost:5000/api/admin/shows", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        movie_id: fd.get("movie_id"),
+        show_time: new Date(String(fd.get("show_time"))),
+        screen: fd.get("screen"),
+        price: Number(fd.get("price")),
+        rows: Number(fd.get("rows")),
+        cols: Number(fd.get("cols")),
+      }),
+    });
+
+    if (!res.ok) toast.error("Error adding show");
+    else {
+      toast.success("Show added");
+      (e.target as HTMLFormElement).reset();
+      refresh();
+    }
+  };
   const deleteShow = async (id: string) => {
-    const { error } = await supabase.from("shows").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); refresh(); }
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`http://localhost:5000/api/admin/shows/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) toast.error("Error deleting");
+    else {
+      toast.success("Deleted");
+      refresh();
+    }
   };
 
   if (!isAdmin) return null;

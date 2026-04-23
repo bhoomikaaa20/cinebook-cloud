@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,15 +32,27 @@ const MyBookings = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("bookings")
-      .select("id, seat_label, price, booking_ref, created_at, shows(show_time, screen, movies(title, poster_url))")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setBookings((data as unknown as BookingRow[]) ?? []);
+
+    const fetchBookings = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        const res = await fetch("http://localhost:5000/api/bookings/my", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        setBookings(data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchBookings();
   }, [user]);
 
   // Group by booking_ref
@@ -67,22 +78,36 @@ const MyBookings = () => {
                 <Card key={ref}>
                   <CardContent className="p-4 flex gap-4">
                     {first.shows.movies.poster_url && (
-                      <img src={first.shows.movies.poster_url} alt="" className="h-28 w-20 object-cover rounded-md" />
+                      <img
+                        src={first.shows.movies.poster_url}
+                        alt=""
+                        className="h-28 w-20 object-cover rounded-md"
+                      />
                     )}
                     <div className="flex-1">
-                      <h3 className="font-medium">{first.shows.movies.title}</h3>
+                      <h3 className="font-medium">
+                        {first.shows.movies.title}
+                      </h3>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(first.shows.show_time).toLocaleString()} · {first.shows.screen}
+                        {new Date(first.shows.show_time).toLocaleString()} ·{" "}
+                        {first.shows.screen}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {items.map((i) => (
-                          <Badge key={i.id} variant="secondary">{i.seat_label}</Badge>
+                          <Badge key={i.id} variant="secondary">
+                            {i.seat_label}
+                          </Badge>
                         ))}
                       </div>
                       <p className="mt-2 text-sm font-medium">
-                        Total ${items.reduce((s, i) => s + Number(i.price), 0).toFixed(2)}
+                        Total $
+                        {items
+                          .reduce((s, i) => s + Number(i.price), 0)
+                          .toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">Ref: {ref.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ref: {ref.slice(0, 8).toUpperCase()}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,44 +26,80 @@ const Auth = () => {
     if (user) navigate("/");
   }, [user, navigate]);
 
+  // 🔐 LOGIN
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get("email") || "");
     const password = String(fd.get("password") || "");
+
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else navigate("/");
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Login failed");
+      } else {
+        localStorage.setItem("token", data.token);
+        toast.success("Logged in successfully");
+        navigate("/");
+      }
+    } catch (err) {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // 📝 SIGNUP
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const fd = new FormData(e.currentTarget);
+
     const parsed = signupSchema.safeParse({
       fullName: fd.get("fullName"),
       email: fd.get("email"),
       password: fd.get("password"),
     });
+
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
       return;
     }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: { full_name: parsed.data.fullName },
-      },
-    });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Account created!");
-      navigate("/");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(parsed.data),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Signup failed");
+      } else {
+        localStorage.setItem("token", data.token);
+        toast.success("Account created!");
+        navigate("/");
+      }
+    } catch (err) {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,6 +117,8 @@ const Auth = () => {
                 <TabsTrigger value="signin">Sign in</TabsTrigger>
                 <TabsTrigger value="signup">Sign up</TabsTrigger>
               </TabsList>
+
+              {/* 🔐 SIGN IN */}
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
@@ -97,6 +134,8 @@ const Auth = () => {
                   </Button>
                 </form>
               </TabsContent>
+
+              {/* 📝 SIGN UP */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
@@ -116,6 +155,7 @@ const Auth = () => {
                   </Button>
                 </form>
               </TabsContent>
+
             </Tabs>
           </CardContent>
         </Card>

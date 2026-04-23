@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,16 +40,21 @@ const Index = () => {
         "content",
         "Browse movies, pick your seats, and book cinema tickets in seconds.",
       );
-    supabase
-      .from("movies")
-      .select("id, title, poster_url, duration_minutes, genre, rating")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setMovies(data ?? []);
-        setLoading(false);
-      });
-  }, []);
 
+    const fetchMovies = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/movies");
+        const data = await res.json();
+        setMovies(data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -150,13 +154,12 @@ const Index = () => {
                         return (
                           <div
                             key={c}
-                            className={`h-6 w-6 rounded-md transition-colors ${
-                              booked
-                                ? "bg-muted"
-                                : selected
-                                  ? "bg-primary shadow-sm shadow-primary/40"
-                                  : "bg-secondary border border-border"
-                            }`}
+                            className={`h-6 w-6 rounded-md transition-colors ${booked
+                              ? "bg-muted"
+                              : selected
+                                ? "bg-primary shadow-sm shadow-primary/40"
+                                : "bg-secondary border border-border"
+                              }`}
                           />
                         );
                       })}
