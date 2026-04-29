@@ -44,7 +44,14 @@ const MyBookings = () => {
         });
 
         const data = await res.json();
-        setBookings(data || []);
+
+        if (!res.ok) {
+          console.error(data.message);
+          setBookings([]); // ✅ prevent crash
+          return;
+        }
+
+        setBookings(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
       } finally {

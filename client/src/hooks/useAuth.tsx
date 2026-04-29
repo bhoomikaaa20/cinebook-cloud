@@ -9,10 +9,11 @@ interface User {
 
 interface AuthCtx {
   user: User | null;
-  session: null; // no session now
+  session: null;
   isAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>; // ✅ added
 }
 
 const Ctx = createContext<AuthCtx>({
@@ -21,6 +22,7 @@ const Ctx = createContext<AuthCtx>({
   isAdmin: false,
   loading: true,
   signOut: async () => { },
+  refreshUser: async () => { }, // ✅ added
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -28,41 +30,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem("token");
+  // 🔥 reusable function
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("http://localhost:5000/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          localStorage.removeItem("token");
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-
-        setUser(data);
-        setIsAdmin(data.role === "admin");
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+      if (!token) {
+        setUser(null);
+        setIsAdmin(false);
+        return;
       }
-    };
 
-    fetchUser();
+      const res = await fetch("http://localhost:5000/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        localStorage.removeItem("token");
+        setUser(null);
+        setIsAdmin(false);
+        return;
+      }
+
+      const data = await res.json();
+
+      setUser(data);
+      setIsAdmin(data.role === "admin");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // 🔥 initial load
+  useEffect(() => {
+    const init = async () => {
+      await fetchUser();
+      setLoading(false);
+    };
+    init();
   }, []);
+
+  // 🔥 expose this to call after login
+  const refreshUser = async () => {
+    await fetchUser();
+  };
 
   const signOut = async () => {
     localStorage.removeItem("token");
@@ -71,7 +84,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <Ctx.Provider value={{ user, session: null, isAdmin, loading, signOut }}>
+    <Ctx.Provider
+      value={{
+        user,
+        session: null,
+        isAdmin,
+        loading,
+        signOut,
+        refreshUser, // ✅ added
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

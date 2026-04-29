@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Booking from "../models/Booking";
+import { v4 as uuidv4 } from "uuid";
 
 // GET BOOKED SEATS
 export const getBookedSeats = async (req: Request, res: Response) => {
@@ -66,9 +67,11 @@ export const getMyBookings = async (req: any, res: Response) => {
                 },
             },
         }));
+        console.error("BOOKING ERROR:", err);
 
         res.json(formatted);
     } catch {
         res.status(500).json({ message: "Error fetching bookings" });
     }
 };
+

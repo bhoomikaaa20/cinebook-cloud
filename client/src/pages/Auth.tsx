@@ -18,9 +18,9 @@ const signupSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("signin");
+  const { user, refreshUser } = useAuth();
 
   useEffect(() => {
     document.title = "Sign in — Cinemati";
@@ -49,8 +49,11 @@ const Auth = () => {
       if (!res.ok) {
         toast.error(data.message || "Login failed");
       } else {
-        localStorage.setItem("token", data.token);
+
         toast.success("Logged in successfully");
+
+        localStorage.setItem("token", data.token);
+        await refreshUser(); // 🔥 THIS FIXES YOUR ISSUE
         navigate("/");
       }
     } catch (err) {
