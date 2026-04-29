@@ -42,7 +42,7 @@ export const createBooking = async (req: any, res: Response) => {
 // GET USER BOOKINGS
 export const getMyBookings = async (req: any, res: Response) => {
     try {
-        const bookings = await Booking.find({})
+        const bookings = await Booking.find({ user_id: req.user._id })
             .populate({
                 path: "show_id",
                 populate: {
