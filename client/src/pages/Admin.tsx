@@ -50,9 +50,9 @@ const Admin = () => {
         bRes.json(),
       ]);
 
-      setMovies(mData || []);
-      setShows(sData || []);
-      setBookings(bData || []);
+      setMovies(Array.isArray(mData) ? mData : []);
+      setShows(Array.isArray(sData) ? sData : []);
+      setBookings(Array.isArray(bData) ? bData : []);
     } catch (err) {
       console.error(err);
     }

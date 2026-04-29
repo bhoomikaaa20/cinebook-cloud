@@ -10,20 +10,23 @@ export const protect = async (req: any, res: Response, next: NextFunction) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
 
-        // 🔥 IMPORTANT: fetch full user
         const user = await User.findById(decoded.id).select("-password");
 
         if (!user) return res.status(401).json({ message: "User not found" });
 
-        req.user = user; // ✅ now includes role
+        // 🔥 IMPORTANT FIX
+        req.user = user.toObject(); // ✅ convert to plain object
 
         next();
-    } catch {
+    } catch (err) {
+        console.error("AUTH ERROR:", err);
         res.status(401).json({ message: "Invalid token" });
     }
 };
 
 export const isAdmin = (req: any, res: Response, next: NextFunction) => {
+    console.log("ADMIN CHECK USER:", req.user); // 👈 ADD THIS
+
     if (req.user && req.user.role === "admin") {
         next();
     } else {
