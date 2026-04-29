@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 
-interface Movie { id: string; title: string; duration_minutes: number; }
-interface ShowRow { id: string; show_time: string; screen: string; price: number; movies: { title: string } | null; }
-interface BookingAdminRow { id: string; seat_label: string; created_at: string; shows: { screen: string; show_time: string; movies: { title: string } | null } | null; }
+interface Movie { _id: string; title: string; duration_minutes: number; }
+interface ShowRow { _id: string; show_time: string; screen: string; price: number; movies: { title: string } | null; }
+interface BookingAdminRow { _id: string; seat_label: string; created_at: string; shows: { screen: string; show_time: string; movies: { title: string } | null } | null; }
 
 const Admin = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -119,7 +119,7 @@ const Admin = () => {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        movie_id: fd.get("movie_id"),
+        movie_id: String(fd.get("movie_id")),
         show_time: new Date(String(fd.get("show_time"))),
         screen: fd.get("screen"),
         price: Number(fd.get("price")),
@@ -185,9 +185,9 @@ const Admin = () => {
               <CardHeader><CardTitle>Existing ({movies.length})</CardTitle></CardHeader>
               <CardContent className="space-y-2 max-h-[500px] overflow-auto">
                 {movies.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between border rounded-md p-2">
+                  <div key={m._id} className="flex items-center justify-between border rounded-md p-2">
                     <div><p className="font-medium text-sm">{m.title}</p><p className="text-xs text-muted-foreground">{m.duration_minutes} min</p></div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteMovie(m.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteMovie(m._id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </CardContent>
@@ -201,10 +201,14 @@ const Admin = () => {
                 <form onSubmit={addShow} className="space-y-3">
                   <div>
                     <Label>Movie</Label>
-                    <Select name="movie_id">
-                      <SelectTrigger><SelectValue placeholder="Pick a movie" /></SelectTrigger>
-                      <SelectContent>{movies.map(m => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <select name="movie_id" required>
+                      <option value="">Select movie</option>
+                      {movies.map((m) => (
+                        <option key={m._id} value={m._id}>
+                          {m.title}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div><Label>Show time</Label><Input name="show_time" type="datetime-local" required /></div>
                   <div className="grid grid-cols-2 gap-2">
@@ -223,12 +227,12 @@ const Admin = () => {
               <CardHeader><CardTitle>Upcoming ({shows.length})</CardTitle></CardHeader>
               <CardContent className="space-y-2 max-h-[500px] overflow-auto">
                 {shows.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between border rounded-md p-2">
+                  <div key={s._id} className="flex items-center justify-between border rounded-md p-2">
                     <div>
                       <p className="font-medium text-sm">{s.movies?.title}</p>
                       <p className="text-xs text-muted-foreground">{new Date(s.show_time).toLocaleString()} · {s.screen}</p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteShow(s.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteShow(s._id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </CardContent>
@@ -240,7 +244,7 @@ const Admin = () => {
               <CardHeader><CardTitle>Recent bookings ({bookings.length})</CardTitle></CardHeader>
               <CardContent className="space-y-2 max-h-[600px] overflow-auto">
                 {bookings.map((b) => (
-                  <div key={b.id} className="border rounded-md p-2 text-sm flex justify-between">
+                  <div key={b._id} className="border rounded-md p-2 text-sm flex justify-between">
                     <div>
                       <p className="font-medium">{b.shows?.movies?.title} — Seat {b.seat_label}</p>
                       <p className="text-xs text-muted-foreground">

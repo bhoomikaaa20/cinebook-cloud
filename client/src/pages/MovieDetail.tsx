@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Calendar } from "lucide-react";
 
 interface Movie {
-  id: string;
+  _id: string;
   title: string;
   description: string | null;
   poster_url: string | null;
@@ -17,7 +17,7 @@ interface Movie {
   rating: string | null;
 }
 interface Show {
-  id: string;
+  _id: string;
   show_time: string;
   screen: string;
   price: number;
@@ -30,8 +30,11 @@ const MovieDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-
+    if (!id || id === "undefined") {
+      console.error("Movie ID missing");
+      setLoading(false);
+      return;
+    }
     const fetchData = async () => {
       try {
         const [movieRes, showRes] = await Promise.all([
@@ -43,7 +46,7 @@ const MovieDetail = () => {
         const showData = await showRes.json();
 
         setMovie(movieData);
-        setShows(showData || []);
+        setShows(Array.isArray(showData) ? showData : []);
 
         if (movieData) document.title = `${movieData.title} — Cinemati`;
       } catch (err) {
@@ -108,7 +111,7 @@ const MovieDetail = () => {
                 {shows.map((s) => {
                   const dt = new Date(s.show_time);
                   return (
-                    <Card key={s.id} className="hover:border-primary transition-colors">
+                    <Card key={s._id} className="hover:border-primary transition-colors">
                       <CardContent className="p-4 flex items-center justify-between gap-3">
                         <div>
                           <div className="font-medium">
@@ -119,7 +122,7 @@ const MovieDetail = () => {
                           </div>
                         </div>
                         <Button asChild size="sm">
-                          <Link to={`/shows/${s.id}`}>Select seats</Link>
+                          <Link to={`/shows/${s._id}`}>Select seats</Link>
                         </Button>
                       </CardContent>
                     </Card>

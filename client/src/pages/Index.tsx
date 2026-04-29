@@ -281,7 +281,8 @@ const Index = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {movies.map((m) => (
-              <Link key={m.id} to={`/movies/${m.id}`} className="group">
+
+              <Link key={m._id} to={`/movies/${m._id}`} className="group">
                 <Card className="overflow-hidden border-border group-hover:border-primary/40 group-hover:shadow-xl transition-all">
                   <div className="aspect-[2/3] bg-muted overflow-hidden relative">
                     {m.poster_url ? (

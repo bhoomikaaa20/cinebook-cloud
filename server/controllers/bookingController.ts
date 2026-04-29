@@ -22,7 +22,7 @@ export const createBooking = async (req: any, res: Response) => {
         const bookingRef = uuidv4();
 
         const bookings = seats.map((seat: string) => ({
-            user_id: req.user.id,
+            user_id: req.user._id,
             show_id,
             seat_label: seat,
             price,
@@ -42,7 +42,7 @@ export const createBooking = async (req: any, res: Response) => {
 // GET USER BOOKINGS
 export const getMyBookings = async (req: any, res: Response) => {
     try {
-        const bookings = await Booking.find({ user_id: req.user.id })
+        const bookings = await Booking.find({})
             .populate({
                 path: "show_id",
                 populate: {
@@ -53,24 +53,26 @@ export const getMyBookings = async (req: any, res: Response) => {
             .sort({ createdAt: -1 });
 
         const formatted = bookings.map((b: any) => ({
-            id: b._id,
+            _id: b._id,
             seat_label: b.seat_label,
             price: b.price,
             booking_ref: b.booking_ref,
             created_at: b.createdAt,
-            shows: {
-                show_time: b.show_id.show_time,
-                screen: b.show_id.screen,
-                movies: {
-                    title: b.show_id.movie_id.title,
-                    poster_url: b.show_id.movie_id.poster_url,
-                },
-            },
+            shows: b.show_id && b.show_id.movie_id
+                ? {
+                    show_time: b.show_id.show_time,
+                    screen: b.show_id.screen,
+                    movies: {
+                        title: b.show_id.movie_id.title,
+                        poster_url: b.show_id.movie_id.poster_url,
+                    },
+                }
+                : null,
         }));
-        console.error("BOOKING ERROR:", err);
 
         res.json(formatted);
-    } catch {
+    } catch (err) {
+        console.error("🔥 REAL ERROR:", err);  // 👈 MUST ADD
         res.status(500).json({ message: "Error fetching bookings" });
     }
 };

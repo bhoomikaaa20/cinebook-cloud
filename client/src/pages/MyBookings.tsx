@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 interface BookingRow {
-  id: string;
+  _id: string;
   seat_label: string;
   price: number;
   booking_ref: string;
@@ -101,7 +101,7 @@ const MyBookings = () => {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {items.map((i) => (
-                          <Badge key={i.id} variant="secondary">
+                          <Badge key={i._id} variant="secondary">
                             {i.seat_label}
                           </Badge>
                         ))}

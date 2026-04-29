@@ -7,7 +7,7 @@ import Booking from "../models/Booking";
 export const getMoviesAdmin = async (req: Request, res: Response) => {
     const movies = await Movie.find().sort({ createdAt: -1 });
     res.json(movies.map(m => ({
-        id: m._id,
+        _id: m._id,
         title: m.title,
         duration_minutes: m.duration_minutes
     })));
@@ -30,7 +30,7 @@ export const getShowsAdmin = async (req: Request, res: Response) => {
         .sort({ show_time: 1 });
 
     res.json(shows.map((s: any) => ({
-        id: s._id,
+        _id: s._id,
         show_time: s.show_time,
         screen: s.screen,
         price: s.price,
@@ -59,7 +59,7 @@ export const getBookingsAdmin = async (req: Request, res: Response) => {
         .limit(50);
 
     res.json(bookings.map((b: any) => ({
-        id: b._id,
+        _id: b._id,
         seat_label: b.seat_label,
         created_at: b.createdAt,
         shows: {

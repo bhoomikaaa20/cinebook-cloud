@@ -10,7 +10,11 @@ export interface IBooking extends Document {
 
 const bookingSchema = new mongoose.Schema<IBooking>(
     {
-        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        user_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
         show_id: { type: mongoose.Schema.Types.ObjectId, ref: "Show", required: true },
         seat_label: { type: String, required: true },
         price: { type: Number, required: true },

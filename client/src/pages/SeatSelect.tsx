@@ -30,7 +30,11 @@ const SeatSelect = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchAll = async () => {
-    if (!id) return;
+    if (!id || id === "undefined") {
+      console.error("Movie ID missing");
+      setLoading(false);
+      return;
+    }
 
     try {
       const [showRes, bookRes] = await Promise.all([

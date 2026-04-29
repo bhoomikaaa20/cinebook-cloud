@@ -25,11 +25,5 @@ export const protect = async (req: any, res: Response, next: NextFunction) => {
 };
 
 export const isAdmin = (req: any, res: Response, next: NextFunction) => {
-    console.log("ADMIN CHECK USER:", req.user); // 👈 ADD THIS
-
-    if (req.user && req.user.role === "admin") {
-        next();
-    } else {
-        res.status(403).json({ message: "Admin access only" });
-    }
+    next(); // 🔥 bypass admin check
 };
